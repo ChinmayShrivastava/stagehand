@@ -922,7 +922,6 @@ export class Stagehand {
       resolveLLMClient({
         modelName: modelName || this.defaultModelName,
         llmProvider: this.llmProvider,
-        requestId,
       });
 
     return this.actHandler
@@ -1000,7 +999,6 @@ export class Stagehand {
       resolveLLMClient({
         modelName: modelName || this.defaultModelName,
         llmProvider: this.llmProvider,
-        requestId,
       });
 
     return this._extract({
@@ -1071,7 +1069,6 @@ export class Stagehand {
       resolveLLMClient({
         modelName: modelName || this.defaultModelName,
         llmProvider: this.llmProvider,
-        requestId,
       });
 
     return this._observe({

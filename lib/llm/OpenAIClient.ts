@@ -9,22 +9,25 @@ export class OpenAIClient implements LLMClient {
   private cache: LLMCache | undefined;
   public logger: (message: LogLine) => void;
   private enableCaching: boolean;
-  private requestId: string;
 
   constructor(
     logger: (message: LogLine) => void,
     enableCaching = false,
     cache: LLMCache | undefined,
-    requestId: string,
   ) {
     this.client = new OpenAI();
     this.logger = logger;
-    this.requestId = requestId;
     this.cache = cache;
     this.enableCaching = enableCaching;
   }
 
-  async createChatCompletion(options: ChatCompletionOptions) {
+  async createChatCompletion({
+    options,
+    requestId,
+  }: {
+    options: ChatCompletionOptions;
+    requestId: string;
+  }) {
     const { image: _, ...optionsWithoutImage } = options;
     this.logger({
       category: "openai",
@@ -49,7 +52,7 @@ export class OpenAIClient implements LLMClient {
     };
 
     if (this.enableCaching) {
-      const cachedResponse = await this.cache.get(cacheOptions, this.requestId);
+      const cachedResponse = await this.cache.get(cacheOptions, requestId);
       if (cachedResponse) {
         this.logger({
           category: "llm_cache",
@@ -57,7 +60,7 @@ export class OpenAIClient implements LLMClient {
           level: 1,
           auxiliary: {
             requestId: {
-              value: this.requestId,
+              value: requestId,
               type: "string",
             },
             cachedResponse: {
@@ -74,7 +77,7 @@ export class OpenAIClient implements LLMClient {
           level: 1,
           auxiliary: {
             requestId: {
-              value: this.requestId,
+              value: requestId,
               type: "string",
             },
           },
@@ -126,7 +129,7 @@ export class OpenAIClient implements LLMClient {
           type: "object",
         },
         requestId: {
-          value: this.requestId,
+          value: requestId,
           type: "string",
         },
       },
@@ -142,7 +145,7 @@ export class OpenAIClient implements LLMClient {
           {
             ...parsedData,
           },
-          this.requestId,
+          requestId,
         );
       }
 
@@ -158,7 +161,7 @@ export class OpenAIClient implements LLMClient {
         level: 1,
         auxiliary: {
           requestId: {
-            value: this.requestId,
+            value: requestId,
             type: "string",
           },
           cacheOptions: {
@@ -171,7 +174,7 @@ export class OpenAIClient implements LLMClient {
           },
         },
       });
-      this.cache.set(cacheOptions, response, this.requestId);
+      this.cache.set(cacheOptions, response, requestId);
     }
 
     return response;

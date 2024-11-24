@@ -51,7 +51,7 @@ export class LLMProvider {
     this.cache.deleteCacheForRequestId(requestId);
   }
 
-  getClient(modelName: AvailableModel, requestId: string): LLMClient {
+  getClient(modelName: AvailableModel): LLMClient {
     const provider = this.modelToProviderMap[modelName];
     if (!provider) {
       throw new Error(`Unsupported model: ${modelName}`);
@@ -59,19 +59,9 @@ export class LLMProvider {
 
     switch (provider) {
       case "openai":
-        return new OpenAIClient(
-          this.logger,
-          this.enableCaching,
-          this.cache,
-          requestId,
-        );
+        return new OpenAIClient(this.logger, this.enableCaching, this.cache);
       case "anthropic":
-        return new AnthropicClient(
-          this.logger,
-          this.enableCaching,
-          this.cache,
-          requestId,
-        );
+        return new AnthropicClient(this.logger, this.enableCaching, this.cache);
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
@@ -81,16 +71,12 @@ export class LLMProvider {
 export const resolveLLMClient = ({
   llmProvider,
   modelName,
-  requestId,
 }: {
   llmProvider?: LLMProvider;
   modelName?: AvailableModel;
-  requestId?: string;
 }) => {
-  if (!llmProvider || !modelName || !requestId) {
-    throw new Error(
-      "Either llmProvider, modelName, and requestId must be provided",
-    );
+  if (!llmProvider || !modelName) {
+    throw new Error("Either llmProvider and modelName must be provided");
   }
-  return llmProvider.getClient(modelName, requestId);
+  return llmProvider.getClient(modelName);
 };

@@ -9,13 +9,11 @@ export class AnthropicClient implements LLMClient {
   private cache: LLMCache | undefined;
   public logger: (message: LogLine) => void;
   private enableCaching: boolean;
-  private requestId: string;
 
   constructor(
     logger: (message: LogLine) => void,
     enableCaching = false,
     cache: LLMCache | undefined,
-    requestId: string,
   ) {
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -23,12 +21,15 @@ export class AnthropicClient implements LLMClient {
     this.logger = logger;
     this.cache = cache;
     this.enableCaching = enableCaching;
-    this.requestId = requestId;
   }
 
-  async createChatCompletion(
-    options: ChatCompletionOptions & { retries?: number },
-  ) {
+  async createChatCompletion({
+    options,
+    requestId,
+  }: {
+    options: ChatCompletionOptions & { retries?: number };
+    requestId: string;
+  }): Promise<any> {
     const { image: _, ...optionsWithoutImage } = options;
     this.logger({
       category: "anthropic",
@@ -53,7 +54,7 @@ export class AnthropicClient implements LLMClient {
     };
 
     if (this.enableCaching) {
-      const cachedResponse = await this.cache.get(cacheOptions, this.requestId);
+      const cachedResponse = await this.cache.get(cacheOptions, requestId);
       if (cachedResponse) {
         this.logger({
           category: "llm_cache",
@@ -65,7 +66,7 @@ export class AnthropicClient implements LLMClient {
               type: "object",
             },
             requestId: {
-              value: this.requestId,
+              value: requestId,
               type: "string",
             },
             cacheOptions: {
@@ -86,7 +87,7 @@ export class AnthropicClient implements LLMClient {
               type: "object",
             },
             requestId: {
-              value: this.requestId,
+              value: requestId,
               type: "string",
             },
           },
@@ -184,7 +185,7 @@ export class AnthropicClient implements LLMClient {
           type: "object",
         },
         requestId: {
-          value: this.requestId,
+          value: requestId,
           type: "string",
         },
       },
@@ -235,7 +236,7 @@ export class AnthropicClient implements LLMClient {
           type: "object",
         },
         requestId: {
-          value: this.requestId,
+          value: requestId,
           type: "string",
         },
       },
@@ -246,7 +247,7 @@ export class AnthropicClient implements LLMClient {
       if (toolUse && "input" in toolUse) {
         const result = toolUse.input;
         if (this.enableCaching) {
-          this.cache.set(cacheOptions, result, this.requestId);
+          this.cache.set(cacheOptions, result, requestId);
         }
 
         return result;
@@ -263,7 +264,7 @@ export class AnthropicClient implements LLMClient {
           level: 1,
           auxiliary: {
             requestId: {
-              value: this.requestId,
+              value: requestId,
               type: "string",
             },
           },
@@ -275,14 +276,14 @@ export class AnthropicClient implements LLMClient {
     }
 
     if (this.enableCaching) {
-      this.cache.set(cacheOptions, transformedResponse, this.requestId);
+      this.cache.set(cacheOptions, transformedResponse, requestId);
       this.logger({
         category: "anthropic",
         message: "cached response",
         level: 1,
         auxiliary: {
           requestId: {
-            value: this.requestId,
+            value: requestId,
             type: "string",
           },
           transformedResponse: {

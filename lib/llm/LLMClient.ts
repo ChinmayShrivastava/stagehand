@@ -42,6 +42,12 @@ export interface ChatCompletionOptions {
 }
 
 export interface LLMClient {
-  createChatCompletion(options: ChatCompletionOptions): Promise<any>;
+  createChatCompletion({
+    options,
+    requestId,
+  }: {
+    options: ChatCompletionOptions;
+    requestId: string;
+  }): Promise<any>;
   logger: (message: { category?: string; message: string }) => void;
 }

@@ -43,7 +43,7 @@ export async function verifyActCompletion({
   requestId: string;
 }): Promise<boolean> {
   const llmClient =
-    initllmClient || resolveLLMClient({ llmProvider, modelName, requestId });
+    initllmClient || resolveLLMClient({ llmProvider, modelName });
 
   const messages: ChatMessage[] = [
     buildVerifyActCompletionSystemPrompt(),
@@ -51,24 +51,27 @@ export async function verifyActCompletion({
   ];
 
   const response = await llmClient.createChatCompletion({
-    model: modelName,
-    messages,
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    image: screenshot
-      ? {
-          buffer: screenshot,
-          description: "This is a screenshot of the whole visible page.",
-        }
-      : undefined,
-    response_model: {
-      name: "Verification",
-      schema: z.object({
-        completed: z.boolean().describe("true if the goal is accomplished"),
-      }),
+    options: {
+      model: modelName,
+      messages,
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      image: screenshot
+        ? {
+            buffer: screenshot,
+            description: "This is a screenshot of the whole visible page.",
+          }
+        : undefined,
+      response_model: {
+        name: "Verification",
+        schema: z.object({
+          completed: z.boolean().describe("true if the goal is accomplished"),
+        }),
+      },
     },
+    requestId,
   });
 
   if (!response || typeof response !== "object") {
@@ -135,7 +138,7 @@ export async function act({
   why?: string;
 } | null> {
   const llmClient =
-    initllmClient || resolveLLMClient({ llmProvider, modelName, requestId });
+    initllmClient || resolveLLMClient({ llmProvider, modelName });
 
   const messages: ChatMessage[] = [
     buildActSystemPrompt(),
@@ -143,17 +146,20 @@ export async function act({
   ];
 
   const response = await llmClient.createChatCompletion({
-    model: modelName,
-    messages,
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    tool_choice: "auto",
-    tools: actTools,
-    image: screenshot
-      ? { buffer: screenshot, description: AnnotatedScreenshotText }
-      : undefined,
+    options: {
+      model: modelName,
+      messages,
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      tool_choice: "auto",
+      tools: actTools,
+      image: screenshot
+        ? { buffer: screenshot, description: AnnotatedScreenshotText }
+        : undefined,
+    },
+    requestId,
   });
 
   const toolCalls = response.choices[0].message.tool_calls;
@@ -213,42 +219,48 @@ export async function extract({
   requestId: string;
 }) {
   const llmClient =
-    initllmClient || resolveLLMClient({ llmProvider, modelName, requestId });
+    initllmClient || resolveLLMClient({ llmProvider, modelName });
 
   const extractionResponse = await llmClient.createChatCompletion({
-    model: modelName,
-    messages: [
-      buildExtractSystemPrompt(),
-      buildExtractUserPrompt(instruction, domElements),
-    ],
-    response_model: {
-      schema: schema,
-      name: "Extraction",
+    options: {
+      model: modelName,
+      messages: [
+        buildExtractSystemPrompt(),
+        buildExtractUserPrompt(instruction, domElements),
+      ],
+      response_model: {
+        schema: schema,
+        name: "Extraction",
+      },
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
     },
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
+    requestId,
   });
 
   const refinedResponse = await llmClient.createChatCompletion({
-    model: modelName,
-    messages: [
-      buildRefineSystemPrompt(),
-      buildRefineUserPrompt(
-        instruction,
-        previouslyExtractedContent,
-        extractionResponse,
-      ),
-    ],
-    response_model: {
-      schema: schema,
-      name: "RefinedExtraction",
+    options: {
+      model: modelName,
+      messages: [
+        buildRefineSystemPrompt(),
+        buildRefineUserPrompt(
+          instruction,
+          previouslyExtractedContent,
+          extractionResponse,
+        ),
+      ],
+      response_model: {
+        schema: schema,
+        name: "RefinedExtraction",
+      },
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
     },
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
+    requestId,
   });
 
   const metadataSchema = z.object({
@@ -265,24 +277,27 @@ export async function extract({
   });
 
   const metadataResponse = await llmClient.createChatCompletion({
-    model: modelName,
-    messages: [
-      buildMetadataSystemPrompt(),
-      buildMetadataPrompt(
-        instruction,
-        refinedResponse,
-        chunksSeen,
-        chunksTotal,
-      ),
-    ],
-    response_model: {
-      name: "Metadata",
-      schema: metadataSchema,
+    options: {
+      model: modelName,
+      messages: [
+        buildMetadataSystemPrompt(),
+        buildMetadataPrompt(
+          instruction,
+          refinedResponse,
+          chunksSeen,
+          chunksTotal,
+        ),
+      ],
+      response_model: {
+        name: "Metadata",
+        schema: metadataSchema,
+      },
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
     },
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
+    requestId,
   });
 
   refinedResponse.metadata = metadataResponse;
@@ -325,25 +340,28 @@ export async function observe({
   });
 
   const llmClient =
-    initllmClient || resolveLLMClient({ llmProvider, modelName, requestId });
+    initllmClient || resolveLLMClient({ llmProvider, modelName });
 
   const observationResponse = await llmClient.createChatCompletion({
-    model: modelName,
-    messages: [
-      buildObserveSystemPrompt(),
-      buildObserveUserMessage(instruction, domElements),
-    ],
-    image: image
-      ? { buffer: image, description: AnnotatedScreenshotText }
-      : undefined,
-    response_model: {
-      schema: observeSchema,
-      name: "Observation",
+    options: {
+      model: modelName,
+      messages: [
+        buildObserveSystemPrompt(),
+        buildObserveUserMessage(instruction, domElements),
+      ],
+      image: image
+        ? { buffer: image, description: AnnotatedScreenshotText }
+        : undefined,
+      response_model: {
+        schema: observeSchema,
+        name: "Observation",
+      },
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
     },
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
+    requestId,
   });
 
   if (!observationResponse) {
@@ -367,15 +385,18 @@ export async function ask({
   requestId: string;
 }) {
   const llmClient =
-    initllmClient || resolveLLMClient({ llmProvider, modelName, requestId });
+    initllmClient || resolveLLMClient({ llmProvider, modelName });
 
   const response = await llmClient.createChatCompletion({
-    model: modelName,
-    messages: [buildAskSystemPrompt(), buildAskUserPrompt(question)],
-    temperature: 0.1,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
+    options: {
+      model: modelName,
+      messages: [buildAskSystemPrompt(), buildAskUserPrompt(question)],
+      temperature: 0.1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    },
+    requestId,
   });
 
   // The parsing is now handled in the LLM clients
